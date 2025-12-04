@@ -69,6 +69,28 @@ const JobCardSchema = new mongoose.Schema(
     laborHours: Number,
     laborServicesTotal: { type: Number, default: 0 }, // Labor & Services Total
     laborServicesTax: { type: Number, default: 0 }, // Labor & Services Tax
+    labourServiceCost: [
+      {
+        LabourCost: { type: Number, required: true },
+        LabourTax: { type: Number, default: 0 },
+        LabourType: { type: String, required: true },
+        LabourNotes: { type: String, default: "" },
+        parts: [
+          {
+            partName: String,
+            quantity: Number,
+            pricePerPiece: Number,
+            totalPrice: Number,
+            taxAmount: Number,
+            hsnNumber: String,
+            taxPercentage: Number,
+            igst: Number,
+            cgstSgst: Number,
+            partNumber: String,
+          },
+        ],
+      },
+    ],
     engineerRemarks: String,
     qualityCheck: {
       notes: String,

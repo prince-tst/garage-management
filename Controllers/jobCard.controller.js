@@ -82,6 +82,40 @@ const validateAndProcessParts = (parts) => {
   });
 };
 
+// Helper function to validate and process LabourServiceCost
+const validateAndProcessLabourServiceCost = (labourServiceCost) => {
+  if (!Array.isArray(labourServiceCost)) {
+    throw new Error("LabourServiceCost must be an array");
+  }
+
+  return labourServiceCost.map((item) => {
+    // Validate required fields
+    if (item.LabourCost === undefined || item.LabourType === undefined) {
+      throw new Error("LabourServiceCost item must have LabourCost and LabourType");
+    }
+
+    const processedItem = {
+      LabourCost: Number(item.LabourCost),
+      LabourTax: Number(item.LabourTax || 0),
+      LabourType: String(item.LabourType),
+      LabourNotes: String(item.LabourNotes || ""),
+    };
+
+    // If LabourType is "parts", validate and process parts array
+    if (item.LabourType === "parts" || item.LabourType.toLowerCase() === "parts") {
+      if (!item.parts || !Array.isArray(item.parts)) {
+        throw new Error("When LabourType is 'parts', a parts array is required");
+      }
+      processedItem.parts = validateAndProcessParts(item.parts);
+    } else {
+      // If not parts, set empty array or omit
+      processedItem.parts = [];
+    }
+
+    return processedItem;
+  });
+};
+
 // ➤ Create a Job Card (Engineer not assigned initially)
 // const createJobCard = async (req, res) => {
 //   try {
@@ -147,6 +181,7 @@ const createJobCard = async (req, res) => {
       laborServicesTotal, // Labor & Services Total
       laborServicesTax, // Labor & Services Tax
       jobDetails, // price removed from here
+      LabourServiceCost, // New field for labor service costs
     } = req.body;
 
     const images = req.files?.images?.map((file) => file.path) || [];
@@ -198,6 +233,19 @@ const createJobCard = async (req, res) => {
       throw new Error("Invalid job card number generated");
     }
 
+    // Validate and process LabourServiceCost if provided
+    let processedLabourServiceCost = [];
+    if (LabourServiceCost) {
+      try {
+        processedLabourServiceCost = validateAndProcessLabourServiceCost(LabourServiceCost);
+      } catch (error) {
+        return res.status(400).json({
+          message: "Invalid LabourServiceCost data",
+          error: error.message,
+        });
+      }
+    }
+
     const newJobCard = new JobCard({
       garageId,
       customerNumber,
@@ -219,6 +267,7 @@ const createJobCard = async (req, res) => {
       laborServicesTotal, // Labor & Services Total
       laborServicesTax, // Labor & Services Tax
       jobDetails, // price removed
+      LabourServiceCost: processedLabourServiceCost, // Processed labor service costs
       images, // These are Cloudinary URLs
       video, // Also Cloudinary URL
       status: "In Progress",
@@ -496,11 +545,26 @@ const updateJobCard = async (req, res) => {
       "video",
       "status",
       "engineerId",
-      "gstApplicable"
+      "gstApplicable",
+      "LabourServiceCost"
     ];
     const filteredUpdates = {};
     for (const key of allowedFields) {
-      if (updates[key] !== undefined) filteredUpdates[key] = updates[key];
+      if (updates[key] !== undefined) {
+        // Special handling for LabourServiceCost
+        if (key === "LabourServiceCost") {
+          try {
+            filteredUpdates[key] = validateAndProcessLabourServiceCost(updates[key]);
+          } catch (error) {
+            return res.status(400).json({
+              message: "Invalid LabourServiceCost data",
+              error: error.message,
+            });
+          }
+        } else {
+          filteredUpdates[key] = updates[key];
+        }
+      }
     }
 
     // Find and update job card
