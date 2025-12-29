@@ -369,7 +369,7 @@ const updateGenerateBillStatus = async (req, res) => {
         .select("invoiceNo");
       if (latestBill && latestBill.invoiceNo) {
         const digits = String(latestBill.invoiceNo).replace(/[^\d]/g, "");
-        formattedInvoiceNo = `INV-${digits.padStart(3, "0")}`;
+        formattedInvoiceNo = `INV-${digits}`;
       }
     } catch (e) {
       // ignore invoice lookup errors
@@ -440,7 +440,7 @@ const getJobCardsByGarage = async (req, res) => {
     const result = jobCards.map((jc) => {
       const rawInvoice = latestInvoiceByJobCard.get(String(jc._id));
       const formattedInvoice = rawInvoice
-        ? `INV-${String(rawInvoice).replace(/[^\d]/g, "").padStart(3, "0")}`
+        ? `INV-${String(rawInvoice).replace(/[^\d]/g, "")}`
         : null;
       return {
         ...jc.toObject(),
@@ -489,7 +489,7 @@ const getJobCardById = async (req, res) => {
         .select("invoiceNo");
       if (latestBill && latestBill.invoiceNo) {
         const digits = String(latestBill.invoiceNo).replace(/[^\d]/g, "");
-        formattedInvoiceNo = `INV-${digits.padStart(3, "0")}`;
+        formattedInvoiceNo = `INV-${digits}`;
       }
     } catch (e) {
       // ignore invoice lookup errors

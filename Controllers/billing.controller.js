@@ -33,17 +33,26 @@ exports.generateBill = async (req, res) => {
     );
     if (!garage) return res.status(404).json({ message: "Garage not found" });
 
-    // Get last invoice number for this garage
-    const lastBill = await Bill.findOne({ garageId: jobCard.garageId }).sort({
+    // Get last invoice number for this garage, with separate series for GST & NON-GST
+    // GST bills: 001, 002, 003, ...
+    // NON-GST bills: 01, 02, 03, ...
+    const isGstBill = billType === "gst";
+    const padWidth = isGstBill ? 3 : 2;
+
+    const lastBill = await Bill.findOne({
+      garageId: jobCard.garageId,
+      billType,
+    }).sort({
       createdAt: -1,
     });
-    let invoiceNo = "001";
+
+    let invoiceNo = isGstBill ? "001" : "01";
     if (lastBill && lastBill.invoiceNo) {
       // Extract number from invoiceNo (e.g., "001" -> 1, "INV-001" -> 1)
-      const lastNumStr = lastBill.invoiceNo.replace(/[^\d]/g, ''); // Remove non-digits
+      const lastNumStr = lastBill.invoiceNo.replace(/[^\d]/g, ""); // Remove non-digits
       const lastNum = parseInt(lastNumStr, 10);
       if (!isNaN(lastNum)) {
-        invoiceNo = (lastNum + 1).toString().padStart(3, "0");
+        invoiceNo = (lastNum + 1).toString().padStart(padWidth, "0");
       }
     }
 
@@ -162,17 +171,23 @@ exports.getInvoice = async (req, res) => {
 exports.getLastInvoiceNumber = async (req, res) => {
   try {
     const { garageId } = req.params;
+    const { billType = "gst" } = req.query;
+
+    const isGstBill = billType === "gst";
+    const padWidth = isGstBill ? 3 : 2;
 
     // Find the last bill for this garage
-    const lastBill = await Bill.findOne({ garageId }).sort({ createdAt: -1 });
+    const lastBill = await Bill.findOne({ garageId, billType }).sort({
+      createdAt: -1,
+    });
 
-    let lastInvoiceNo = "INV-001";
+    let lastInvoiceNo = isGstBill ? "INV-001" : "INV-01";
     if (lastBill && lastBill.invoiceNo) {
       // Extract number from invoiceNo and format it properly
-      const lastNumStr = lastBill.invoiceNo.replace(/[^\d]/g, ''); // Remove non-digits
+      const lastNumStr = lastBill.invoiceNo.replace(/[^\d]/g, ""); // Remove non-digits
       const lastNum = parseInt(lastNumStr, 10);
       if (!isNaN(lastNum)) {
-        lastInvoiceNo = `INV-${lastNum.toString().padStart(3, "0")}`;
+        lastInvoiceNo = `INV-${lastNum.toString().padStart(padWidth, "0")}`;
       }
     }
 
