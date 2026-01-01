@@ -502,9 +502,9 @@ module.exports = {
   // Simple SMTP test endpoint
   async testEmailSend(req, res) {
     try {
-      const to = req.query.to || process.env.EMAIL_USER;
+      const to = req.query.to || process.env.FROM_EMAIL || process.env.BREVO_SMTP_USER;
       if (!to) {
-        return res.status(400).json({ message: "Provide ?to=email@example.com or set EMAIL_USER" });
+        return res.status(400).json({ message: "Provide ?to=email@example.com or set FROM_EMAIL/BREVO_SMTP_USER" });
       }
       const result = await sendEmail(to, "SMTP Test - Garage Management", "This is a test email from the server.");
       if (result && result.success) {

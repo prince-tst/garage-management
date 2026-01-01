@@ -1,12 +1,14 @@
 const nodemailer = require("nodemailer");
 const fetch = require("node-fetch");
 
-// Simple Gmail service transport (uses Gmail + App Password)
+// Brevo SMTP transport configuration
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.SMTP_SERVER || 'smtp-relay.brevo.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: false, // true for 465, false for other ports (587 uses STARTTLS)
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    user: process.env.BREVO_SMTP_USER,
+    pass: process.env.BREVO_SMTP_KEY,
   },
   pool: true,
   maxConnections: 5
@@ -17,16 +19,22 @@ const transporter = nodemailer.createTransport({
  * Returns { success: boolean, error?: string }
  */
 const sendEmail = async (to, subject, text) => {
+  // Format from address with name if available
+  const fromEmail = process.env.FROM_EMAIL || process.env.BREVO_SMTP_USER;
+  const fromName = process.env.FROM_NAME || 'Garage Systems';
+  const from = `${fromName} <${fromEmail}>`;
+
   const mailOptions = {
-    from: process.env.EMAIL_USER,
+    from,
     to,
     subject,
     text,
   };
 
-  // Fallback to SendGrid API if configured
+  // Fallback to SendGrid API if configured (optional, can be removed if not needed)
   if (process.env.SENDGRID_API_KEY) {
     try {
+      const fromEmail = process.env.FROM_EMAIL || process.env.BREVO_SMTP_USER;
       const resp = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
         headers: {
@@ -35,7 +43,7 @@ const sendEmail = async (to, subject, text) => {
         },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: to }] }],
-          from: { email: process.env.EMAIL_USER },
+          from: { email: fromEmail },
           subject,
           content: [{ type: "text/plain", value: text }],
         }),
